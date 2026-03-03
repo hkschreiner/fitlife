@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#4ECDC4">
+  <title>FitLife - Your Personal Fitness Journey</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-content">
+        <h1 class="app-title">FitLife</h1>
+        <div class="header-right">
+          <span id="streak-badge" class="streak-badge" title="Workout Streak">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main id="main-content" class="main-content">
+
+      <!-- ===== DASHBOARD TAB ===== -->
+      <section id="tab-dashboard" class="tab-content active">
+        <!-- Motivational Quote -->
+        <div class="card motivation-card">
+          <p id="daily-quote" class="quote-text"></p>
+          <button id="new-quote-btn" class="btn-text">New Quote</button>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-label">Current</span>
+            <span id="stat-current-weight" class="stat-value">125</span>
+            <span class="stat-unit">lbs</span>
+          </div>
+          <div class="stat-card accent">
+            <span class="stat-label">Goal</span>
+            <span class="stat-value">120</span>
+            <span class="stat-unit">lbs</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">To Go</span>
+            <span id="stat-to-go" class="stat-value">5</span>
+            <span class="stat-unit">lbs</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Streak</span>
+            <span id="stat-streak" class="stat-value">0</span>
+            <span class="stat-unit">days</span>
+          </div>
+        </div>
+
+        <!-- Today's Workout Preview -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Today's Workout</h2>
+            <span id="today-day-label" class="badge"></span>
+          </div>
+          <div id="today-workout-preview" class="today-preview"></div>
+          <button id="start-today-workout" class="btn-primary btn-block">Start Workout</button>
+        </div>
+
+        <!-- Water Intake -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Water Intake</h2>
+            <span id="water-count">0 / 8 glasses</span>
+          </div>
+          <div class="water-tracker">
+            <div id="water-glasses" class="water-glasses"></div>
+            <div class="water-btns">
+              <button id="water-add" class="btn-secondary btn-sm">+ Add Glass</button>
+              <button id="water-reset" class="btn-text btn-sm">Reset</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Body Measurements Quick Entry -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Quick Log</h2>
+          </div>
+          <div class="quick-log-grid">
+            <div class="quick-log-item">
+              <label>Weight (lbs)</label>
+              <input type="number" id="quick-weight" step="0.1" placeholder="125">
+              <button id="log-weight-btn" class="btn-secondary btn-sm">Log</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== WORKOUTS TAB ===== -->
+      <section id="tab-workouts" class="tab-content">
+        <!-- Weekly Schedule -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Weekly Schedule</h2>
+            <div class="schedule-actions">
+              <button id="reset-schedule-btn" class="btn-text btn-sm hidden">Reset</button>
+              <button id="edit-schedule-btn" class="btn-secondary btn-sm">Swap Days</button>
+            </div>
+          </div>
+          <div id="swap-instructions" class="swap-instructions hidden">
+            <p>Tap the first day, then tap the second day to swap their workouts.</p>
+          </div>
+          <div id="weekly-schedule" class="weekly-schedule"></div>
+        </div>
+
+        <!-- Workout Detail View (hidden by default) -->
+        <div id="workout-detail" class="workout-detail hidden">
+          <div class="card">
+            <div class="workout-detail-header">
+              <button id="back-to-schedule" class="btn-icon">&larr;</button>
+              <h2 id="workout-title"></h2>
+            </div>
+
+            <!-- Main Workout -->
+            <div id="workout-exercises" class="exercise-list"></div>
+
+            <!-- Rest Timer -->
+            <div class="rest-timer-bar" id="rest-timer-bar">
+              <div class="timer-display">
+                <span id="timer-seconds">45</span>s
+              </div>
+              <div class="timer-controls">
+                <button id="timer-start" class="btn-secondary btn-sm">Start Rest Timer</button>
+                <button id="timer-reset" class="btn-text btn-sm">Reset</button>
+              </div>
+              <div class="timer-progress">
+                <div id="timer-progress-bar" class="timer-progress-fill"></div>
+              </div>
+            </div>
+
+            <button id="complete-workout-btn" class="btn-primary btn-block">Complete Workout</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== PROGRESS TAB ===== -->
+      <section id="tab-progress" class="tab-content">
+        <!-- Weight Progress Chart -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Weight Progress</h2>
+            <div class="chart-period-btns">
+              <button class="chart-period active" data-period="30">30D</button>
+              <button class="chart-period" data-period="90">90D</button>
+              <button class="chart-period" data-period="all">All</button>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="weight-chart"></canvas>
+          </div>
+          <div id="weight-summary" class="weight-summary"></div>
+        </div>
+
+        <!-- Body Measurements -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Body Measurements</h2>
+            <button id="add-measurement-btn" class="btn-secondary btn-sm">+ Add</button>
+          </div>
+          <div id="measurements-display" class="measurements-display"></div>
+        </div>
+
+        <!-- Workout History -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Workout History</h2>
+          </div>
+          <div id="workout-history" class="workout-history"></div>
+        </div>
+
+        <!-- Milestones -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Milestones</h2>
+          </div>
+          <div id="milestones" class="milestones"></div>
+        </div>
+      </section>
+
+      <!-- ===== TIPS TAB ===== -->
+      <section id="tab-tips" class="tab-content">
+        <!-- Nutrition Tips -->
+        <div class="card">
+          <h2>Nutrition for Fat Loss & Muscle Gain</h2>
+          <div class="tips-list">
+            <div class="tip-item">
+              <span class="tip-icon">&#x1F957;</span>
+              <div>
+                <h3>Protein is Key</h3>
+                <p>Aim for 0.7-1g of protein per pound of body weight daily (about 85-125g). This supports muscle building while losing fat. Good sources: chicken, fish, eggs, Greek yogurt, beans, and tofu.</p>
+              </div>
+            </div>
+            <div class="tip-item">
+              <span class="tip-icon">&#x1F34E;</span>
+              <div>
+                <h3>Calorie Deficit (Small & Sustainable)</h3>
+                <p>To lose 5 lbs safely, aim for a modest 250-300 calorie deficit per day. This equals about 1 lb lost every 2 weeks. Don't cut too drastically &mdash; your body needs fuel for workouts!</p>
+              </div>
+            </div>
+            <div class="tip-item">
+              <span class="tip-icon">&#x1F96C;</span>
+              <div>
+                <h3>Eat More Vegetables</h3>
+                <p>Fill half your plate with vegetables. They're low in calories, high in fiber, and packed with nutrients that support recovery and overall health.</p>
+              </div>
+            </div>
+            <div class="tip-item">
+              <span class="tip-icon">&#x1F4A7;</span>
+              <div>
+                <h3>Stay Hydrated</h3>
+                <p>Drink at least 8 glasses (64 oz) of water daily. Dehydration can be mistaken for hunger and negatively affects workout performance.</p>
+              </div>
+            </div>
+            <div class="tip-item">
+              <span class="tip-icon">&#x23F0;</span>
+              <div>
+                <h3>Meal Timing</h3>
+                <p>Eat a small meal with protein and carbs 1-2 hours before working out, and have protein within 30-60 minutes after. This maximizes muscle recovery.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recovery Tips -->
+        <div class="card">
+          <h2>Recovery & Injury Prevention</h2>
+          <div class="tips-list">
+            <div class="tip-item">
+              <span class="tip-icon">&#x1F6CF;</span>
+              <div>
+                <h3>Prioritize Sleep</h3>
+                <p>Aim for 7-9 hours of quality sleep. This is when your muscles repair and grow. Poor sleep increases cortisol, which promotes fat storage.</p>
+              </div>
+            </div>
+            <div class="tip-item">
+              <span class="tip-icon">&#x1F9D8;</span>
+              <div>
+                <h3>Always Warm Up & Cool Down</h3>
+                <p>Never skip warming up! At 50, your muscles and joints need extra preparation. 5 minutes of light movement before and stretching after each workout prevents injury.</p>
+              </div>
+            </div>
+            <div class="tip-item">
+              <span class="tip-icon">&#x1F4AA;</span>
+              <div>
+                <h3>Listen to Your Body</h3>
+                <p>Muscle soreness is normal, but sharp pain is not. If something hurts (beyond normal soreness), rest that area and modify exercises. It's better to take a day off than be out for weeks.</p>
+              </div>
+            </div>
+            <div class="tip-item">
+              <span class="tip-icon">&#x1F504;</span>
+              <div>
+                <h3>Rest Days Matter</h3>
+                <p>Your muscles grow during rest, not during exercise. The cardio days between strength training give your muscles time to recover while still keeping you active.</p>
+              </div>
+            </div>
+            <div class="tip-item">
+              <span class="tip-icon">&#x1F9B4;</span>
+              <div>
+                <h3>Bone Health</h3>
+                <p>Weight-bearing exercises (like the ones in your program) help maintain bone density, which is especially important after 50. Consider a calcium and vitamin D supplement &mdash; talk to your doctor.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Workout Form Tips -->
+        <div class="card">
+          <h2>General Form Tips</h2>
+          <div class="tips-list">
+            <div class="tip-item">
+              <span class="tip-icon">&#x1F3AF;</span>
+              <div>
+                <h3>Start Light</h3>
+                <p>Begin with lighter dumbbells (3-8 lbs) and focus on perfect form. You can always increase weight once the movement feels comfortable. Proper form prevents injury.</p>
+              </div>
+            </div>
+            <div class="tip-item">
+              <span class="tip-icon">&#x1F552;</span>
+              <div>
+                <h3>Control the Movement</h3>
+                <p>Move slowly and deliberately. Count 2-3 seconds on the way up and 2-3 seconds on the way down. This keeps tension on the muscle and reduces joint stress.</p>
+              </div>
+            </div>
+            <div class="tip-item">
+              <span class="tip-icon">&#x1F4A8;</span>
+              <div>
+                <h3>Breathe Properly</h3>
+                <p>Exhale during the hard part (lifting) and inhale during the easy part (lowering). Never hold your breath &mdash; this can spike blood pressure.</p>
+              </div>
+            </div>
+            <div class="tip-item">
+              <span class="tip-icon">&#x1F4C8;</span>
+              <div>
+                <h3>Progressive Overload</h3>
+                <p>Gradually increase difficulty every 2-3 weeks. Add 1-2 more reps, use slightly heavier dumbbells, or take shorter rest periods. Small progress adds up!</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Exercise Detail Modal -->
+    <div id="exercise-modal" class="modal hidden">
+      <div class="modal-overlay"></div>
+      <div class="modal-content">
+        <button id="close-modal" class="modal-close">&times;</button>
+        <div id="exercise-illustration" class="exercise-illustration" style="height:80px;"></div>
+        <h2 id="exercise-modal-title"></h2>
+        <div id="exercise-modal-muscles" class="exercise-muscles"></div>
+        <div id="exercise-modal-sets" class="exercise-sets-info"></div>
+        <div class="exercise-instructions">
+          <h3>How to Perform</h3>
+          <ol id="exercise-modal-instructions"></ol>
+        </div>
+        <div class="exercise-tips">
+          <h3>Tips & Safety</h3>
+          <ul id="exercise-modal-tips"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Measurement Entry Modal -->
+    <div id="measurement-modal" class="modal hidden">
+      <div class="modal-overlay"></div>
+      <div class="modal-content modal-form">
+        <button class="modal-close measurement-modal-close">&times;</button>
+        <h2>Log Measurements</h2>
+        <p class="modal-subtitle">Track your inches &mdash; often more telling than the scale!</p>
+        <div class="form-group">
+          <label>Waist (inches)</label>
+          <input type="number" id="meas-waist" step="0.1" placeholder="e.g. 30">
+        </div>
+        <div class="form-group">
+          <label>Hips (inches)</label>
+          <input type="number" id="meas-hips" step="0.1" placeholder="e.g. 36">
+        </div>
+        <div class="form-group">
+          <label>Right Arm (inches)</label>
+          <input type="number" id="meas-arm" step="0.1" placeholder="e.g. 11">
+        </div>
+        <div class="form-group">
+          <label>Right Thigh (inches)</label>
+          <input type="number" id="meas-thigh" step="0.1" placeholder="e.g. 20">
+        </div>
+        <button id="save-measurements-btn" class="btn-primary btn-block">Save Measurements</button>
+      </div>
+    </div>
+
+    <!-- Workout Complete Modal -->
+    <div id="complete-modal" class="modal hidden">
+      <div class="modal-overlay"></div>
+      <div class="modal-content modal-celebrate">
+        <div class="celebrate-icon">&#x1F389;</div>
+        <h2>Workout Complete!</h2>
+        <p id="complete-message" class="celebrate-message"></p>
+        <div id="complete-stats" class="celebrate-stats"></div>
+        <button id="close-complete" class="btn-primary btn-block">Great Job!</button>
+      </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-tab="dashboard">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span>Home</span>
+      </button>
+      <button class="nav-item" data-tab="workouts">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6.5 6.5h11M6.5 17.5h11M2 12h2m16 0h2M6 6.5V4m0 16v-2.5M18 6.5V4m0 16v-2.5"/>
+          <rect x="4" y="8" width="4" height="8" rx="1"/>
+          <rect x="16" y="8" width="4" height="8" rx="1"/>
+          <rect x="8" y="10" width="8" height="4" rx="0.5"/>
+        </svg>
+        <span>Workouts</span>
+      </button>
+      <button class="nav-item" data-tab="progress">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        <span>Progress</span>
+      </button>
+      <button class="nav-item" data-tab="tips">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <span>Tips</span>
+      </button>
+    </nav>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

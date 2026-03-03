@@ -404,6 +404,173 @@ function getData(key, fallback) {
 
 function setData(key, val) {
   localStorage.setItem('fitlife_' + key, JSON.stringify(val));
+  const now = new Date().toISOString();
+  localStorage.setItem('fitlife_' + key + '_updated', now);
+  syncEngine.scheduleSync(key, val, now);
+}
+
+// ===== Cloud Sync Engine =====
+const syncEngine = {
+  pendingTimer: null,
+  pendingKeys: {},
+  isSyncing: false,
+  API_URL: '/api/sync',
+
+  scheduleSync(key, val, timestamp) {
+    this.pendingKeys[key] = { value: val, updated_at: timestamp };
+    clearTimeout(this.pendingTimer);
+    this.pendingTimer = setTimeout(() => this.pushToCloud(), 1000);
+  },
+
+  async pushToCloud() {
+    const keys = Object.keys(this.pendingKeys);
+    if (keys.length === 0) return;
+
+    const items = keys.map(key => ({
+      key,
+      value: this.pendingKeys[key].value,
+      updated_at: this.pendingKeys[key].updated_at
+    }));
+
+    this.pendingKeys = {};
+    this.updateStatus('syncing');
+
+    try {
+      const resp = await fetch(this.API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items })
+      });
+      if (!resp.ok) throw new Error('Push failed');
+      this.updateStatus('synced');
+    } catch (err) {
+      console.warn('Sync push failed, queuing for retry:', err);
+      // Re-queue failed items
+      items.forEach(item => {
+        this.pendingKeys[item.key] = { value: item.value, updated_at: item.updated_at };
+      });
+      this.savePendingQueue();
+      this.updateStatus('pending');
+    }
+  },
+
+  async pullFromCloud() {
+    this.updateStatus('syncing');
+    try {
+      const resp = await fetch(this.API_URL);
+      if (!resp.ok) throw new Error('Pull failed');
+      const { data } = await resp.json();
+
+      let hasUpdates = false;
+
+      for (const key of Object.keys(data)) {
+        const cloud = data[key];
+        const localUpdated = localStorage.getItem('fitlife_' + key + '_updated');
+        const cloudTime = new Date(cloud.updated_at).getTime();
+        const localTime = localUpdated ? new Date(localUpdated).getTime() : 0;
+
+        if (cloudTime > localTime) {
+          // Cloud is newer — update localStorage
+          localStorage.setItem('fitlife_' + key, JSON.stringify(cloud.value));
+          localStorage.setItem('fitlife_' + key + '_updated', cloud.updated_at);
+          hasUpdates = true;
+        } else if (localTime > cloudTime) {
+          // Local is newer — push to cloud
+          const val = getData(key, null);
+          if (val !== null) {
+            this.pendingKeys[key] = { value: val, updated_at: localUpdated };
+          }
+        }
+      }
+
+      // Also push any local keys that don't exist in cloud yet
+      const localKeys = ['weights', 'workout_history', 'water_today', 'measurements', 'custom_schedule'];
+      for (const key of localKeys) {
+        if (!data[key]) {
+          const val = getData(key, null);
+          const ts = localStorage.getItem('fitlife_' + key + '_updated');
+          if (val !== null && ts) {
+            this.pendingKeys[key] = { value: val, updated_at: ts };
+          }
+        }
+      }
+
+      // Push any pending local changes
+      if (Object.keys(this.pendingKeys).length > 0) {
+        await this.pushToCloud();
+      }
+
+      if (hasUpdates) {
+        refreshAllViews();
+      }
+
+      this.updateStatus('synced');
+    } catch (err) {
+      console.warn('Sync pull failed:', err);
+      this.updateStatus('offline');
+    }
+  },
+
+  savePendingQueue() {
+    localStorage.setItem('fitlife_pending_sync', JSON.stringify(this.pendingKeys));
+  },
+
+  loadPendingQueue() {
+    try {
+      const q = localStorage.getItem('fitlife_pending_sync');
+      if (q) {
+        this.pendingKeys = JSON.parse(q);
+        localStorage.removeItem('fitlife_pending_sync');
+      }
+    } catch { /* ignore */ }
+  },
+
+  updateStatus(status) {
+    const el = document.getElementById('sync-status');
+    if (!el) return;
+    el.className = 'sync-status sync-' + status;
+    el.title = status === 'synced' ? 'Synced' :
+               status === 'syncing' ? 'Syncing...' :
+               status === 'pending' ? 'Changes pending' : 'Offline';
+  }
+};
+
+function initSync() {
+  // Load any pending changes from a previous offline session
+  syncEngine.loadPendingQueue();
+
+  // Pull latest data from cloud
+  syncEngine.pullFromCloud();
+
+  // Re-sync when tab becomes visible (user switches between phone and desktop)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      syncEngine.pullFromCloud();
+    }
+  });
+
+  // Flush pending queue when back online
+  window.addEventListener('online', () => {
+    syncEngine.pullFromCloud();
+  });
+}
+
+function refreshAllViews() {
+  // Reload schedule from localStorage (may have changed from cloud)
+  weeklySchedule = getSchedule();
+
+  // Re-render all views
+  renderStats();
+  renderQuote();
+  renderTodayPreview();
+  renderWater();
+  renderWeeklySchedule();
+
+  // Re-render progress tab if visible
+  const progressTab = document.getElementById('tab-progress');
+  if (progressTab && progressTab.classList.contains('active')) {
+    renderProgressTab();
+  }
 }
 
 // ===== App Initialization =====
@@ -414,6 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initProgress();
   initTimer();
   initModals();
+  initSync();
 });
 
 // ===== Navigation =====
@@ -606,7 +774,7 @@ function handleSwapClick(index) {
 }
 
 function resetSchedule() {
-  localStorage.removeItem('fitlife_custom_schedule');
+  setData('custom_schedule', null);
   weeklySchedule = getSchedule();
   swapFirstIndex = -1;
   document.getElementById('reset-schedule-btn').classList.add('hidden');

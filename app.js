@@ -416,6 +416,26 @@ const syncEngine = {
   isSyncing: false,
   API_URL: '/api/sync',
 
+  getToken() {
+    return localStorage.getItem('fitlife_sync_token') || '';
+  },
+
+  setToken(token) {
+    localStorage.setItem('fitlife_sync_token', token);
+  },
+
+  promptForToken() {
+    const modal = document.getElementById('passphrase-modal');
+    if (modal) modal.classList.add('active');
+  },
+
+  handleAuthError() {
+    // Clear invalid token and prompt for new one
+    localStorage.removeItem('fitlife_sync_token');
+    this.updateStatus('locked');
+    this.promptForToken();
+  },
+
   scheduleSync(key, val, timestamp) {
     this.pendingKeys[key] = { value: val, updated_at: timestamp };
     clearTimeout(this.pendingTimer);
@@ -423,6 +443,9 @@ const syncEngine = {
   },
 
   async pushToCloud() {
+    const token = this.getToken();
+    if (!token) { this.updateStatus('locked'); return; }
+
     const keys = Object.keys(this.pendingKeys);
     if (keys.length === 0) return;
 
@@ -438,9 +461,13 @@ const syncEngine = {
     try {
       const resp = await fetch(this.API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Sync-Token': token
+        },
         body: JSON.stringify({ items })
       });
+      if (resp.status === 401) { this.handleAuthError(); return; }
       if (!resp.ok) throw new Error('Push failed');
       this.updateStatus('synced');
     } catch (err) {
@@ -455,9 +482,15 @@ const syncEngine = {
   },
 
   async pullFromCloud() {
+    const token = this.getToken();
+    if (!token) { this.updateStatus('locked'); this.promptForToken(); return; }
+
     this.updateStatus('syncing');
     try {
-      const resp = await fetch(this.API_URL);
+      const resp = await fetch(this.API_URL, {
+        headers: { 'X-Sync-Token': token }
+      });
+      if (resp.status === 401) { this.handleAuthError(); return; }
       if (!resp.ok) throw new Error('Pull failed');
       const { data } = await resp.json();
 
@@ -531,7 +564,8 @@ const syncEngine = {
     el.className = 'sync-status sync-' + status;
     el.title = status === 'synced' ? 'Synced' :
                status === 'syncing' ? 'Syncing...' :
-               status === 'pending' ? 'Changes pending' : 'Offline';
+               status === 'pending' ? 'Changes pending' :
+               status === 'locked' ? 'Enter passphrase to sync' : 'Offline';
   }
 };
 
@@ -539,7 +573,62 @@ function initSync() {
   // Load any pending changes from a previous offline session
   syncEngine.loadPendingQueue();
 
-  // Pull latest data from cloud
+  // Set up passphrase modal handlers
+  const submitBtn = document.getElementById('passphrase-submit');
+  const skipBtn = document.getElementById('passphrase-skip');
+  const input = document.getElementById('passphrase-input');
+  const errorEl = document.getElementById('passphrase-error');
+  const modal = document.getElementById('passphrase-modal');
+
+  if (submitBtn) {
+    submitBtn.addEventListener('click', async () => {
+      const passphrase = input.value.trim();
+      if (!passphrase) return;
+
+      // Test the passphrase by making a request
+      errorEl.classList.add('hidden');
+      submitBtn.textContent = 'Checking...';
+      submitBtn.disabled = true;
+
+      try {
+        const resp = await fetch(syncEngine.API_URL, {
+          headers: { 'X-Sync-Token': passphrase }
+        });
+        if (resp.status === 401) {
+          errorEl.classList.remove('hidden');
+          submitBtn.textContent = 'Connect';
+          submitBtn.disabled = false;
+          return;
+        }
+        // Passphrase is correct — save and sync
+        syncEngine.setToken(passphrase);
+        modal.classList.remove('active');
+        input.value = '';
+        syncEngine.pullFromCloud();
+      } catch {
+        // Network error — save token anyway (will verify on next sync)
+        syncEngine.setToken(passphrase);
+        modal.classList.remove('active');
+        input.value = '';
+        syncEngine.updateStatus('offline');
+      }
+    });
+  }
+
+  if (input) {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitBtn.click();
+    });
+  }
+
+  if (skipBtn) {
+    skipBtn.addEventListener('click', () => {
+      modal.classList.remove('active');
+      syncEngine.updateStatus('offline');
+    });
+  }
+
+  // Pull latest data from cloud (will prompt for passphrase if not set)
   syncEngine.pullFromCloud();
 
   // Re-sync when tab becomes visible (user switches between phone and desktop)

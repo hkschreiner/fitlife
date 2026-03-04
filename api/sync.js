@@ -6,10 +6,16 @@ module.exports = async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Sync-Token');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
+  }
+
+  // Verify passphrase
+  const token = req.headers['x-sync-token'];
+  if (!token || token !== process.env.SYNC_SECRET) {
+    return res.status(401).json({ ok: false, error: 'Unauthorized' });
   }
 
   try {

@@ -115,9 +115,50 @@ body {
 .sync-syncing { background: white; animation: syncPulse 0.8s ease-in-out infinite; }
 .sync-pending { background: #F6AD55; box-shadow: 0 0 4px #F6AD55; }
 .sync-offline { background: #FC8181; }
+.sync-locked { background: #F6AD55; animation: syncPulse 1.5s ease-in-out infinite; }
 @keyframes syncPulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
+}
+
+/* ===== Passphrase Modal ===== */
+.passphrase-modal-content {
+  text-align: center;
+  padding: 32px 24px;
+}
+.passphrase-modal-content h2 {
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.passphrase-desc {
+  color: var(--text-light);
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+}
+.passphrase-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  text-align: center;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+.passphrase-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+.passphrase-error {
+  color: #E53E3E;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+.passphrase-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 /* ===== Main Content ===== */

@@ -371,6 +371,20 @@
       </div>
     </div>
 
+    <!-- Passphrase Modal -->
+    <div id="passphrase-modal" class="modal">
+      <div class="modal-content passphrase-modal-content">
+        <h2>Enter Sync Passphrase</h2>
+        <p class="passphrase-desc">Enter your passphrase to sync data between devices.</p>
+        <input type="password" id="passphrase-input" class="passphrase-input" placeholder="Your passphrase" autocomplete="off">
+        <p id="passphrase-error" class="passphrase-error hidden">Incorrect passphrase. Please try again.</p>
+        <div class="passphrase-actions">
+          <button id="passphrase-submit" class="btn-primary">Connect</button>
+          <button id="passphrase-skip" class="btn-text">Skip (offline only)</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Bottom Navigation -->
     <nav class="bottom-nav">
       <button class="nav-item active" data-tab="dashboard">

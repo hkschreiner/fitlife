@@ -426,7 +426,7 @@ const syncEngine = {
 
   promptForToken() {
     const modal = document.getElementById('passphrase-modal');
-    if (modal) modal.classList.add('active');
+    if (modal) modal.classList.remove('hidden');
   },
 
   handleAuthError() {
@@ -620,7 +620,7 @@ function initSync() {
 
         // Passphrase is correct — save and sync
         syncEngine.setToken(passphrase);
-        modal.classList.remove('active');
+        modal.classList.add('hidden');
         input.value = '';
         submitBtn.textContent = 'Connect';
         submitBtn.disabled = false;
@@ -629,7 +629,7 @@ function initSync() {
         console.warn('Passphrase check failed:', err);
         // Network/timeout error — save token and try syncing later
         syncEngine.setToken(passphrase);
-        modal.classList.remove('active');
+        modal.classList.add('hidden');
         input.value = '';
         submitBtn.textContent = 'Connect';
         submitBtn.disabled = false;
@@ -647,7 +647,7 @@ function initSync() {
 
   if (skipBtn) {
     skipBtn.addEventListener('click', () => {
-      modal.classList.remove('active');
+      modal.classList.add('hidden');
       syncEngine.updateStatus('offline');
     });
   }

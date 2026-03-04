@@ -459,14 +459,18 @@ const syncEngine = {
     this.updateStatus('syncing');
 
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
       const resp = await fetch(this.API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Sync-Token': token
         },
-        body: JSON.stringify({ items })
+        body: JSON.stringify({ items }),
+        signal: controller.signal
       });
+      clearTimeout(timeout);
       if (resp.status === 401) { this.handleAuthError(); return; }
       if (!resp.ok) throw new Error('Push failed');
       this.updateStatus('synced');
@@ -487,9 +491,13 @@ const syncEngine = {
 
     this.updateStatus('syncing');
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
       const resp = await fetch(this.API_URL, {
-        headers: { 'X-Sync-Token': token }
+        headers: { 'X-Sync-Token': token },
+        signal: controller.signal
       });
+      clearTimeout(timeout);
       if (resp.status === 401) { this.handleAuthError(); return; }
       if (!resp.ok) throw new Error('Pull failed');
       const { data } = await resp.json();
@@ -591,26 +599,42 @@ function initSync() {
       submitBtn.disabled = true;
 
       try {
+        // Add timeout to prevent infinite hang
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+
         const resp = await fetch(syncEngine.API_URL, {
-          headers: { 'X-Sync-Token': passphrase }
+          headers: { 'X-Sync-Token': passphrase },
+          signal: controller.signal
         });
+        clearTimeout(timeout);
+
         if (resp.status === 401) {
+          errorEl.textContent = 'Incorrect passphrase. Please try again.';
           errorEl.classList.remove('hidden');
           submitBtn.textContent = 'Connect';
           submitBtn.disabled = false;
           return;
         }
+        if (!resp.ok) throw new Error('Server error: ' + resp.status);
+
         // Passphrase is correct — save and sync
         syncEngine.setToken(passphrase);
         modal.classList.remove('active');
         input.value = '';
+        submitBtn.textContent = 'Connect';
+        submitBtn.disabled = false;
         syncEngine.pullFromCloud();
-      } catch {
-        // Network error — save token anyway (will verify on next sync)
+      } catch (err) {
+        console.warn('Passphrase check failed:', err);
+        // Network/timeout error — save token and try syncing later
         syncEngine.setToken(passphrase);
         modal.classList.remove('active');
         input.value = '';
+        submitBtn.textContent = 'Connect';
+        submitBtn.disabled = false;
         syncEngine.updateStatus('offline');
+        showToast('Saved offline. Will sync when connected.');
       }
     });
   }
